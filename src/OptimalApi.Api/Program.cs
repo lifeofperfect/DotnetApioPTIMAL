@@ -1,7 +1,9 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OptimalApi.Api.Infrastructure;
+using OptimalApi.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,9 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddDbContext<AppDbContext>(options => options
     .UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure())
     .UseSnakeCaseNamingConvention());
+
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
