@@ -1,0 +1,25 @@
+# Keep the build context small and secrets out of images
+**/bin/
+**/obj/
+**/TestResults/
+tests/
+.git/
+.github/
+.idea/
+.vs/
+.vscode/
+.qodo/
+.claude/
+**/*.user
+**/.DS_Store
+
+# Secrets: never copied into an image
+.env
+.env.*
+!.env.example
+**/appsettings.*.local.json
+
+# Not needed to build
+README.md
+docker-compose*.yml
+Dockerfile*

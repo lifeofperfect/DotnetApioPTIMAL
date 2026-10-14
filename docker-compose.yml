@@ -1,5 +1,10 @@
 name: optimalapi
 
+# Shared connection string for the containers below. Inside the compose network the database host is "db".
+# Gss Encryption Mode=Disable: skip the Kerberos probe; the slim .NET image has no Kerberos library and would log a spurious error.
+x-db-connection: &db-connection
+  ConnectionStrings__Default: Host=db;Port=5432;Database=${POSTGRES_DB:-optimalapi};Username=${POSTGRES_USER:-app};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env};Gss Encryption Mode=Disable
+
 services:
   db:
     image: postgres:17-alpine
@@ -19,6 +24,37 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  # Runs once: applies pending EF Core migrations, then exits.
+  # Migrations run here, not on app startup, so several API instances never race to migrate.
+  migrate:
+    build:
+      context: .
+      target: migrator
+    image: optimalapi-migrator:local
+    container_name: optimalapi-migrate
+    environment:
+      <<: *db-connection
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      target: runtime
+    image: optimalapi-api:local
+    container_name: optimalapi-api
+    restart: unless-stopped
+    environment:
+      <<: *db-connection
+      ASPNETCORE_ENVIRONMENT: Development
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:

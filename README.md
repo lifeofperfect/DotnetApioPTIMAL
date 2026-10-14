@@ -7,7 +7,19 @@ ASP.NET Core (.NET 10) CRUD API on PostgreSQL, run locally with Docker.
 - .NET SDK 10
 - Docker Desktop
 
-## First-time setup
+## Option A: run everything in Docker (no .NET SDK needed)
+
+```bash
+cp .env.example .env            # then set POSTGRES_PASSWORD (skip if .env already exists)
+docker compose up --build -d    # db -> migrate (applies migrations, exits) -> api
+```
+
+The API is at http://localhost:8080 (change `API_PORT` in `.env` if 8080 is taken).
+Stop with `docker compose down` (data is kept in the `pgdata` volume; add `-v` to wipe it).
+
+## Option B: run the API locally (for development and debugging)
+
+First time only:
 
 ```bash
 cp .env.example .env              # then set POSTGRES_PASSWORD (skip if .env already exists)
@@ -19,13 +31,17 @@ dotnet user-secrets set "ConnectionStrings:Default" \
   --project src/OptimalApi.Api
 ```
 
-## Run
+Every time:
 
 ```bash
-docker compose up -d db                                  # start Postgres
+docker compose up -d db                                  # start only Postgres
 dotnet ef database update --project src/OptimalApi.Api   # apply migrations
 dotnet run --project src/OptimalApi.Api                  # http://localhost:5080
 ```
+
+## API
+
+Base URL: http://localhost:8080 (Docker) or http://localhost:5080 (local `dotnet run`).
 
 | Endpoint | Purpose |
 | --- | --- |
@@ -48,7 +64,8 @@ Every response, success or error, uses the same envelope:
 Errors: 400 validation (per-field `errors`), 404, 405, 409 concurrent edit, 415 wrong content type,
 500 unexpected (details are logged under the same `traceId`, never sent to the client).
 
-To try every endpoint, open `src/OptimalApi.Api/OptimalApi.Api.http` in Rider and run the requests top to bottom.
+To try every endpoint, open `src/OptimalApi.Api/OptimalApi.Api.http` in Rider and run the requests top to bottom
+(it targets the local `dotnet run` port 5080; change `@baseUrl` to 8080 when using Docker).
 
 ## Migrations
 
@@ -62,3 +79,7 @@ dotnet ef database update --project src/OptimalApi.Api
 ```bash
 dotnet test
 ```
+
+- `tests/OptimalApi.UnitTests`: validation rules, no dependencies.
+- `tests/OptimalApi.IntegrationTests`: the full API over HTTP against a real, throwaway PostgreSQL
+  started by Testcontainers. **Docker must be running.** Nothing touches your dev database.

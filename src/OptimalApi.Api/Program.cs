@@ -1,7 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OptimalApi.Api.Filters;
 using OptimalApi.Api.Http;
@@ -17,9 +16,7 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
         "Connection string 'Default' is missing. Set it with dotnet user-secrets (see README.md) " +
         "or the ConnectionStrings__Default environment variable.");
 
-builder.Services.AddDbContext<AppDbContext>(options => options
-    .UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure())
-    .UseSnakeCaseNamingConvention());
+builder.Services.AddDbContext<AppDbContext>(options => AppDbContext.Configure(options, connectionString));
 
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
