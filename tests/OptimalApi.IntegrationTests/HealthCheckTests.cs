@@ -25,6 +25,8 @@ public sealed class HealthCheckTests : IClassFixture<HealthCheckTests.ApiFactory
         // Liveness never opens a connection, so an unreachable placeholder is enough here.
         // Step 5 replaces this with a real Postgres from Testcontainers.
         protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-            builder.UseSetting("ConnectionStrings:Default", "Host=127.0.0.1;Port=1;Database=unused;Username=unused");
+            builder
+                .UseSetting("ConnectionStrings:Default", "Host=127.0.0.1;Port=1;Database=unused;Username=unused")
+                .UseSetting("HealthChecksUI:Enabled", "false");
     }
 }

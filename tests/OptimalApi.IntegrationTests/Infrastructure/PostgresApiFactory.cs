@@ -27,7 +27,10 @@ public sealed class PostgresApiFactory : WebApplicationFactory<Program>, IAsyncL
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-        builder.UseSetting("ConnectionStrings:Default", _postgres.GetConnectionString());
+        builder
+            .UseSetting("ConnectionStrings:Default", _postgres.GetConnectionString())
+            // The dashboard polls over real HTTP, which the in-memory test server doesn't have.
+            .UseSetting("HealthChecksUI:Enabled", "false");
 
     /// <summary>Empties the products table so each test starts from a known state.</summary>
     public async Task ResetDatabaseAsync()

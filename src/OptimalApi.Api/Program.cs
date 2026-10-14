@@ -1,8 +1,7 @@
 using FluentValidation;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OptimalApi.Api.Filters;
+using OptimalApi.Api.Health;
 using OptimalApi.Api.Http;
 using OptimalApi.Api.Infrastructure;
 using OptimalApi.Api.Middleware;
@@ -40,18 +39,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 // the app refuses to start without it.
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<AppDbContext>("database", tags: ["ready"]);
-
-// The retry policy above would keep a readiness probe hanging for ~30s when Postgres is down.
-// Probes must answer fast, so cap every health check.
-builder.Services.PostConfigure<HealthCheckServiceOptions>(options =>
-{
-    foreach (var registration in options.Registrations)
-    {
-        registration.Timeout = TimeSpan.FromSeconds(5);
-    }
-});
+builder.Services.AddAppHealthChecks(builder.Configuration);
 
 var app = builder.Build();
 
@@ -66,9 +54,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// Liveness: the process is up. Readiness: dependencies (Postgres) are reachable.
-app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
-app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
+// /health/live, /health/ready, and in Development /health (details) and /health-ui (dashboard).
+app.MapAppHealthChecks();
 app.MapControllers();
 
 await app.RunAsync();

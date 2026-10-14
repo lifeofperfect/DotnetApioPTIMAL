@@ -13,6 +13,19 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.13" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+    <PackageVersion Include="AspNetCore.HealthChecks.UI" Version="9.0.0" />
+    <PackageVersion Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
+    <PackageVersion Include="AspNetCore.HealthChecks.UI.InMemory.Storage" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Transitive pins">
+    <!-- HealthChecks UI 9 was built against EF Core 8; keep its in-memory history store on the same EF Core major as the app. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.13" />
+    <!-- CVE-2025-9708 / GHSA-w7r3-mgwf-4mqq: HealthChecks UI pulls KubernetesClient 15.0.1; fixed in 17.0.14.
+         Only used by the UI's Kubernetes service discovery, which this app does not enable. -->
+    <PackageVersion Include="KubernetesClient" Version="17.0.14" />
+    <!-- KubernetesClient 15 used to bring this in; 17 does not, but HealthChecks UI still loads it at runtime. -->
+    <PackageVersion Include="IdentityModel" Version="5.2.0" />
   </ItemGroup>
 
   <ItemGroup Label="Tests">

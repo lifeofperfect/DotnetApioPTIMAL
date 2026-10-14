@@ -50,6 +50,8 @@ services:
     environment:
       <<: *db-connection
       ASPNETCORE_ENVIRONMENT: Development
+      # The health dashboard (/health-ui) polls the app itself; inside the container that's localhost:8080.
+      HealthChecksUI__EndpointUrl: http://localhost:8080/health
     ports:
       - "${API_PORT:-8080}:8080"
     depends_on:

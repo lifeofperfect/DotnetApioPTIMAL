@@ -51,7 +51,9 @@ Base URL: http://localhost:8080 (Docker) or http://localhost:5080 (local `dotnet
 | `PUT /api/products/{id}` | Update: `{ "name", "price", "version" }` → 200, or 409 if `version` is stale |
 | `DELETE /api/products/{id}` | Delete → 200 |
 | `GET /health/live` | Process is up (never touches the database) |
-| `GET /health/ready` | Postgres is reachable (503 within 5s if not) |
+| `GET /health/ready` | Postgres is usable (503 within 5s if not) |
+| `GET /health` | Every check with details as JSON (Development only) |
+| `GET /health-ui` | Health dashboard with history (Development only) |
 | `GET /openapi/v1.json` | OpenAPI document (Development only) |
 
 Every response, success or error, uses the same envelope:
@@ -66,6 +68,30 @@ Errors: 400 validation (per-field `errors`), 404, 405, 409 concurrent edit, 415 
 
 To try every endpoint, open `src/OptimalApi.Api/OptimalApi.Api.http` in Rider and run the requests top to bottom
 (it targets the local `dotnet run` port 5080; change `@baseUrl` to 8080 when using Docker).
+
+## Health checks
+
+| Check | What it watches | Degraded | Unhealthy |
+| --- | --- | --- | --- |
+| `database` | Postgres answers, schema up to date | query over 500 ms, or pending migrations | can't reach Postgres |
+| `database-connections` | share of Postgres's connection limit in use | over 80% | over 95% |
+| `database-activity` | stuck queries and locks | a query running over 30 s, a session waiting on a lock, or a transaction left open | (never) |
+| `database-size` | database size and product row estimate | over 10 GB | (never) |
+| `thread-pool` | thread pool starvation (blocking calls) | over 50 work items queued | (never) |
+| `garbage-collection` | time spent paused for GC | over 10% | (never) |
+| `memory` | process memory | over 1 GB | (never) |
+| `disk-space` | free disk where the app runs | under 5 GB or 5% free | under 1 GB free |
+| `app-info` | version, git commit, environment, uptime, runtime | (always Healthy: information only) | |
+
+Only `database` affects `/health/ready`. The others are information for `/health` and the dashboard, so a warning
+such as a slow GC or a long query never takes the app out of the load balancer.
+
+Each check also reports its numbers (latency, connections, sizes, thread counts and so on) in `/health`.
+`/health-ui` polls `/health` every 15 s and keeps a short history per check; open it at
+http://localhost:5080/health-ui (`dotnet run`) or http://localhost:8080/health-ui (Docker).
+
+`/health` and `/health-ui` reveal internals, so they are only enabled in Development. To use them in production,
+put them behind authentication first.
 
 ## Migrations
 

@@ -68,3 +68,11 @@ DELETE {{baseUrl}}/api/products/{{productId}}
 
 ### 10. Delete again -> 404
 DELETE {{baseUrl}}/api/products/{{productId}}
+
+### 11. Health: every check with details (Development only)
+GET {{baseUrl}}/health
+
+### 12. Health: readiness (what Docker/Kubernetes use)
+GET {{baseUrl}}/health/ready
+
+### The dashboard is a web page: open {{baseUrl}}/health-ui in your browser.
