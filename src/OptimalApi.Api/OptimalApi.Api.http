@@ -1,0 +1,70 @@
+### OptimalApi requests: run them top to bottom in Rider (click the green arrow next to each one).
+### Start the API first: dotnet run --project src/OptimalApi.Api
+
+@baseUrl = http://localhost:5080
+
+### 1. Create a product (saves its id and version for the requests below)
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "name": "Mechanical Keyboard",
+  "price": 89.99
+}
+
+> {%
+    client.global.set("productId", response.body.data.id);
+    client.global.set("version", response.body.data.version);
+%}
+
+### 2. Get it by id
+GET {{baseUrl}}/api/products/{{productId}}
+
+### 3. List products (page 1, 20 per page)
+GET {{baseUrl}}/api/products?page=1&pageSize=20
+
+### 4. Update it, sending the version from the last read
+PUT {{baseUrl}}/api/products/{{productId}}
+Content-Type: application/json
+
+{
+  "name": "Mechanical Keyboard (RGB)",
+  "price": 99.99,
+  "version": {{version}}
+}
+
+> {%
+    client.global.set("staleVersion", client.global.get("version"));
+    client.global.set("version", response.body.data.version);
+%}
+
+### 5. Update with the old (stale) version -> 409 Conflict
+PUT {{baseUrl}}/api/products/{{productId}}
+Content-Type: application/json
+
+{
+  "name": "Someone else's edit",
+  "price": 1.00,
+  "version": {{staleVersion}}
+}
+
+### 6. Invalid body -> 400 with field errors
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "name": "",
+  "price": -5
+}
+
+### 7. Page size too big -> 400
+GET {{baseUrl}}/api/products?pageSize=1000
+
+### 8. Unknown id -> 404
+GET {{baseUrl}}/api/products/00000000-0000-0000-0000-000000000000
+
+### 9. Delete it -> 200
+DELETE {{baseUrl}}/api/products/{{productId}}
+
+### 10. Delete again -> 404
+DELETE {{baseUrl}}/api/products/{{productId}}

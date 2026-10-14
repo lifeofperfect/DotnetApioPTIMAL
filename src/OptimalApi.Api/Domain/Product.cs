@@ -16,7 +16,7 @@ public sealed class Product
     public Product(string name, decimal price)
     {
         Id = Guid.CreateVersion7(); // time-ordered: index-friendly, unlike random v4 GUIDs
-        CreatedAt = DateTime.UtcNow;
+        CreatedAt = UtcNowForDatabase();
         SetDetails(name, price);
     }
 
@@ -36,7 +36,7 @@ public sealed class Product
     public void Update(string name, decimal price)
     {
         SetDetails(name, price);
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = UtcNowForDatabase();
     }
 
     private void SetDetails(string name, decimal price)
@@ -47,5 +47,13 @@ public sealed class Product
 
         Name = name.Trim();
         Price = price;
+    }
+
+    // PostgreSQL stores timestamps to the microsecond; .NET has 10x finer ticks.
+    // Rounding here means a value reads back exactly as it was returned from create/update.
+    private static DateTime UtcNowForDatabase()
+    {
+        var now = DateTime.UtcNow;
+        return now.AddTicks(-(now.Ticks % (TimeSpan.TicksPerMillisecond / 1000)));
     }
 }

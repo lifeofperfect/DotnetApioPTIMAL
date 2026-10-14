@@ -1,8 +1,12 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using OptimalApi.Api.Filters;
+using OptimalApi.Api.Http;
 using OptimalApi.Api.Infrastructure;
+using OptimalApi.Api.Middleware;
 using OptimalApi.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,7 +24,23 @@ builder.Services.AddDbContext<AppDbContext>(options => options
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => options.Filters.Add<FluentValidationFilter>());
+
+// Every error uses the ApiResponse envelope, including the ones ASP.NET produces itself.
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    // Malformed JSON, wrong types, missing required fields: same 400 shape as FluentValidation errors.
+    options.InvalidModelStateResponseFactory = context =>
+        new BadRequestObjectResult(ApiErrors.Validation(context.HttpContext, context.ModelState));
+
+    // Stop MVC turning empty 404/415 results into ProblemDetails; UseStatusCodePages below fills them in instead.
+    options.SuppressMapClientErrors = true;
+});
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+// Required by UseExceptionHandler() even though GlobalExceptionHandler writes the actual response;
+// the app refuses to start without it.
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks()
@@ -39,6 +59,10 @@ builder.Services.PostConfigure<HealthCheckServiceOptions>(options =>
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+// Errors that would otherwise have an empty body (unknown URL, wrong HTTP method, wrong content type)
+// get the same ApiResponse envelope as everything else.
+app.UseStatusCodePages(context => ApiErrors.WriteAsync(context.HttpContext, context.HttpContext.Response.StatusCode));
 
 if (app.Environment.IsDevelopment())
 {

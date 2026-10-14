@@ -29,9 +29,26 @@ dotnet run --project src/OptimalApi.Api                  # http://localhost:5080
 
 | Endpoint | Purpose |
 | --- | --- |
+| `GET /api/products?page=1&pageSize=20` | List products (pageSize 1–100) |
+| `GET /api/products/{id}` | Get one product, including its `version` |
+| `POST /api/products` | Create: `{ "name": "...", "price": 9.99 }` → 201 |
+| `PUT /api/products/{id}` | Update: `{ "name", "price", "version" }` → 200, or 409 if `version` is stale |
+| `DELETE /api/products/{id}` | Delete → 200 |
 | `GET /health/live` | Process is up (never touches the database) |
 | `GET /health/ready` | Postgres is reachable (503 within 5s if not) |
 | `GET /openapi/v1.json` | OpenAPI document (Development only) |
+
+Every response, success or error, uses the same envelope:
+
+```json
+{ "success": true,  "message": "Product retrieved.", "data": { ... }, "errors": null }
+{ "success": false, "message": "Validation failed.", "data": null, "errors": { "name": ["Name is required."] }, "traceId": "00-..." }
+```
+
+Errors: 400 validation (per-field `errors`), 404, 405, 409 concurrent edit, 415 wrong content type,
+500 unexpected (details are logged under the same `traceId`, never sent to the client).
+
+To try every endpoint, open `src/OptimalApi.Api/OptimalApi.Api.http` in Rider and run the requests top to bottom.
 
 ## Migrations
 
